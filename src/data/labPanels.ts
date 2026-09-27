@@ -225,6 +225,24 @@ export const DEDICATED_FORM_LABS: Record<string, LabTest[]> = {
   ],
 };
 
+/**
+ * Some job-specific panels re-list a test that's already in the baseline
+ * panel (e.g. armed personnel's own "Audiometry — baseline" on top of the
+ * generic baseline Audiometry). Collapse same-name tests to one row, in
+ * their first-seen position, keeping the LAST (most specific / job-panel)
+ * note — the job's own wording supersedes the generic baseline note.
+ */
+function dedupeLabTests(tests: LabTest[]): LabTest[] {
+  const order: string[] = [];
+  const byKey = new Map<string, LabTest>();
+  for (const test of tests) {
+    const key = test.name.trim().toLowerCase();
+    if (!byKey.has(key)) order.push(key);
+    byKey.set(key, test);
+  }
+  return order.map((key) => byKey.get(key)!);
+}
+
 /** Resolve the full lab-test list a beneficiary must complete for a job + protocol. */
 export function getLabTestsForJob(jobCode: string, protocol: ExamProtocol): LabTest[] {
   const job = getJob(jobCode);
@@ -233,7 +251,7 @@ export function getLabTestsForJob(jobCode: string, protocol: ExamProtocol): LabT
   const formKey = protocol === "pre_placement" ? job.prePlacementForm : job.periodicForm;
 
   if (formKey !== "general" && DEDICATED_FORM_LABS[formKey]) {
-    return DEDICATED_FORM_LABS[formKey];
+    return dedupeLabTests(DEDICATED_FORM_LABS[formKey]);
   }
 
   const extra =
@@ -241,5 +259,5 @@ export function getLabTestsForJob(jobCode: string, protocol: ExamProtocol): LabT
       ? PERIODIC_EXTRA_LABS[job.code] ?? PRE_PLACEMENT_EXTRA_LABS[job.code] ?? []
       : PRE_PLACEMENT_EXTRA_LABS[job.code] ?? [];
 
-  return [...BASELINE_LABS, ...extra];
+  return dedupeLabTests([...BASELINE_LABS, ...extra]);
 }
