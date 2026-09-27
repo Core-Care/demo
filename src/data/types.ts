@@ -35,10 +35,18 @@ export interface LabTest {
   note?: string;
 }
 
+/** A follow-up sub-form that expands under a question when it is answered "Yes". */
+export type FollowUpKind =
+  | "occupational_exposure"
+  | "restricted_duty"
+  | "substance_use"
+  | "recent_exam";
+
 /** A yes/no health-history question. */
 export interface QuestionnaireItem {
   id: string;
   label: string;
+  followUp?: FollowUpKind;
 }
 
 /** A normal/abnormal physical-exam row. */

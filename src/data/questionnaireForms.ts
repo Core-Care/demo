@@ -1,7 +1,19 @@
-import type { QuestionnaireForm, QuestionnaireItem, ExamItem } from "./types";
+import type { QuestionnaireForm, QuestionnaireItem, ExamItem, FollowUpKind } from "./types";
 
 function items(labels: string[], prefix: string): QuestionnaireItem[] {
   return labels.map((label, i) => ({ id: `${prefix}-${i + 1}`, label }));
+}
+
+/** Like `items`, but entries can be a plain label or a [label, followUp] tuple
+ * for questions that expand a sub-form when answered "Yes". */
+function structuredItems(
+  entries: (string | [label: string, followUp: FollowUpKind])[],
+  prefix: string,
+): QuestionnaireItem[] {
+  return entries.map((entry, i) => {
+    const [label, followUp] = Array.isArray(entry) ? entry : [entry, undefined];
+    return { id: `${prefix}-${i + 1}`, label, followUp };
+  });
 }
 
 function examItems(labels: string[], prefix: string): ExamItem[] {
@@ -36,11 +48,14 @@ const BASE_HEALTH_HISTORY = [
   "Any health problem which requires visits to the doctor, or for which you take regular drugs",
 ];
 
-const BASE_OCCUPATIONAL_HISTORY = [
-  "Have you ever been exposed to fumes, dust, chemicals, loud noise, radiation, or other hazards at work or elsewhere?",
+const BASE_OCCUPATIONAL_HISTORY: (string | [string, FollowUpKind])[] = [
+  [
+    "Have you ever been exposed to fumes, dust, chemicals, loud noise, radiation, or other hazards at work or elsewhere?",
+    "occupational_exposure",
+  ],
   "Have you ever received worker's disability benefits / compensation?",
   "Have you been absent from work for medical reasons in the past five years?",
-  "Have you ever required light or restricted duty?",
+  ["Have you ever required light or restricted duty?", "restricted_duty"],
   "Have you ever had any occupational illness?",
 ];
 
@@ -57,11 +72,11 @@ const HAZARDOUS_MATERIALS_HISTORY = [
   "Any other hazardous exposures?",
 ];
 
-const BASE_LIFESTYLE = [
-  "Tobacco (cigarettes, shisha, pipe, vape, ...)",
-  "Alcohol",
-  "Substance use",
-  "Were you subjected to medical examinations within the past 6 months?",
+const BASE_LIFESTYLE: (string | [string, FollowUpKind])[] = [
+  ["Tobacco (cigarettes, shisha, pipe, vape, ...)", "substance_use"],
+  ["Alcohol", "substance_use"],
+  ["Substance use", "substance_use"],
+  ["Were you subjected to medical examinations within the past 6 months?", "recent_exam"],
   "If not fully vaccinated, are you willing to take the vaccine(s) for work purposes in KSA?",
 ];
 
@@ -89,8 +104,8 @@ export const QUESTIONNAIRE_FORMS: Record<string, QuestionnaireForm> = {
     title: "General Medical Assessment",
     sourceLabel: "Appendix 1 — General Medical Sheet",
     healthHistory: items(BASE_HEALTH_HISTORY, "gen-hx"),
-    occupationalHistory: items(BASE_OCCUPATIONAL_HISTORY, "gen-occ"),
-    lifestyle: items(BASE_LIFESTYLE, "gen-life"),
+    occupationalHistory: structuredItems(BASE_OCCUPATIONAL_HISTORY, "gen-occ"),
+    lifestyle: structuredItems(BASE_LIFESTYLE, "gen-life"),
     physicalExam: examItems(BASE_PHYSICAL_EXAM, "gen-pe"),
   },
   marine: {
@@ -111,8 +126,8 @@ export const QUESTIONNAIRE_FORMS: Record<string, QuestionnaireForm> = {
       ],
       "mar-hx",
     ),
-    occupationalHistory: items(BASE_OCCUPATIONAL_HISTORY, "mar-occ"),
-    lifestyle: items(BASE_LIFESTYLE, "mar-life"),
+    occupationalHistory: structuredItems(BASE_OCCUPATIONAL_HISTORY, "mar-occ"),
+    lifestyle: structuredItems(BASE_LIFESTYLE, "mar-life"),
     physicalExam: examItems(
       [
         ...BASE_PHYSICAL_EXAM,
@@ -147,8 +162,8 @@ export const QUESTIONNAIRE_FORMS: Record<string, QuestionnaireForm> = {
       ],
       "food-hx",
     ),
-    occupationalHistory: items(BASE_OCCUPATIONAL_HISTORY, "food-occ"),
-    lifestyle: items(BASE_LIFESTYLE, "food-life"),
+    occupationalHistory: structuredItems(BASE_OCCUPATIONAL_HISTORY, "food-occ"),
+    lifestyle: structuredItems(BASE_LIFESTYLE, "food-life"),
     physicalExam: examItems(
       [
         ...BASE_PHYSICAL_EXAM,
@@ -182,8 +197,8 @@ export const QUESTIONNAIRE_FORMS: Record<string, QuestionnaireForm> = {
       ],
       "dive-hx",
     ),
-    occupationalHistory: items(BASE_OCCUPATIONAL_HISTORY, "dive-occ"),
-    lifestyle: items(BASE_LIFESTYLE, "dive-life"),
+    occupationalHistory: structuredItems(BASE_OCCUPATIONAL_HISTORY, "dive-occ"),
+    lifestyle: structuredItems(BASE_LIFESTYLE, "dive-life"),
     physicalExam: examItems(
       [
         ...BASE_PHYSICAL_EXAM,
@@ -213,11 +228,11 @@ export const QUESTIONNAIRE_FORMS: Record<string, QuestionnaireForm> = {
       ],
       "weld-hx",
     ),
-    occupationalHistory: items(
+    occupationalHistory: structuredItems(
       [...BASE_OCCUPATIONAL_HISTORY, "Have you ever worked with any of the following materials, or under any of these conditions?", ...HAZARDOUS_MATERIALS_HISTORY],
       "weld-occ",
     ),
-    lifestyle: items(BASE_LIFESTYLE, "weld-life"),
+    lifestyle: structuredItems(BASE_LIFESTYLE, "weld-life"),
     physicalExam: examItems(
       [...BASE_PHYSICAL_EXAM, "Thyroid exam", "Lymph node", "Eye exam"],
       "weld-pe",
@@ -238,11 +253,11 @@ export const QUESTIONNAIRE_FORMS: Record<string, QuestionnaireForm> = {
       ],
       "mine-hx",
     ),
-    occupationalHistory: items(
+    occupationalHistory: structuredItems(
       [...BASE_OCCUPATIONAL_HISTORY, "Have you ever worked with any of the following materials, or under any of these conditions?", ...HAZARDOUS_MATERIALS_HISTORY],
       "mine-occ",
     ),
-    lifestyle: items(BASE_LIFESTYLE, "mine-life"),
+    lifestyle: structuredItems(BASE_LIFESTYLE, "mine-life"),
     physicalExam: examItems(
       [...BASE_PHYSICAL_EXAM, "Thyroid exam", "Lymph node", "Eye exam"],
       "mine-pe",
