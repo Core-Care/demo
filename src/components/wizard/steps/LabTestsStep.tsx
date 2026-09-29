@@ -1,32 +1,26 @@
 "use client";
 
-import { useState } from "react";
 import type { LabTest } from "@/data/types";
+import { EMPTY_LAB_ROW, type LabResultRow, type YesNo } from "@/data/assessment";
 import {
   adminFieldLabelClass,
   adminSecondaryTextClass,
+  adminSectionTitleClass,
   adminSubsectionTitleClass,
   adminTextInputClass,
 } from "@/styles/admin-ui";
 
-type SampleCollected = "yes" | "no" | null;
-type ResultStatus = "normal" | "abnormal" | "pending";
-
-interface RowState {
-  sampleCollected: SampleCollected;
-  resultStatus: ResultStatus;
-  notes: string;
-  fileName: string | null;
-}
-
-function LabTestRow({ test, index }: { test: LabTest; index: number }) {
-  const [row, setRow] = useState<RowState>({
-    sampleCollected: null,
-    resultStatus: "pending",
-    notes: "",
-    fileName: null,
-  });
-
+function LabTestRow({
+  test,
+  index,
+  row,
+  onChange,
+}: {
+  test: LabTest;
+  index: number;
+  row: LabResultRow;
+  onChange: (patch: Partial<LabResultRow>) => void;
+}) {
   return (
     <div className="rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] p-4">
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -61,7 +55,7 @@ function LabTestRow({ test, index }: { test: LabTest; index: number }) {
                   type="radio"
                   name={`sample-${index}`}
                   checked={row.sampleCollected === opt}
-                  onChange={() => setRow((s) => ({ ...s, sampleCollected: opt }))}
+                  onChange={() => onChange({ sampleCollected: opt as YesNo })}
                   className="h-4 w-4 accent-[color:var(--color-primary)]"
                 />
                 {opt}
@@ -74,7 +68,7 @@ function LabTestRow({ test, index }: { test: LabTest; index: number }) {
           <label className={adminFieldLabelClass}>Result status</label>
           <select
             value={row.resultStatus}
-            onChange={(e) => setRow((s) => ({ ...s, resultStatus: e.target.value as ResultStatus }))}
+            onChange={(e) => onChange({ resultStatus: e.target.value as LabResultRow["resultStatus"] })}
             className={`${adminTextInputClass} mt-1`}
           >
             <option value="pending">Pending</option>
@@ -91,7 +85,7 @@ function LabTestRow({ test, index }: { test: LabTest; index: number }) {
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               className="hidden"
-              onChange={(e) => setRow((s) => ({ ...s, fileName: e.target.files?.[0]?.name ?? null }))}
+              onChange={(e) => onChange({ fileName: e.target.files?.[0]?.name ?? null })}
             />
           </label>
         </div>
@@ -101,7 +95,7 @@ function LabTestRow({ test, index }: { test: LabTest; index: number }) {
           <textarea
             rows={2}
             value={row.notes}
-            onChange={(e) => setRow((s) => ({ ...s, notes: e.target.value }))}
+            onChange={(e) => onChange({ notes: e.target.value })}
             className={`${adminTextInputClass} mt-1`}
             placeholder="Enter value, units, or clinical notes"
           />
@@ -111,16 +105,33 @@ function LabTestRow({ test, index }: { test: LabTest; index: number }) {
   );
 }
 
-export function LabTestsPanel({ tests }: { tests: LabTest[] }) {
-  if (tests.length === 0) {
-    return <p className={adminSecondaryTextClass}>No mandatory lab tests apply to this job/protocol.</p>;
-  }
-
+export function LabTestsStep({
+  tests,
+  results,
+  onChange,
+}: {
+  tests: LabTest[];
+  results: Record<string, LabResultRow>;
+  onChange: (index: number, patch: Partial<LabResultRow>) => void;
+}) {
   return (
-    <div className="space-y-3">
-      {tests.map((test, i) => (
-        <LabTestRow key={`${test.name}-${i}`} test={test} index={i} />
-      ))}
+    <div className="space-y-4">
+      <h2 className={adminSectionTitleClass}>Laboratory</h2>
+      {tests.length === 0 ? (
+        <p className={adminSecondaryTextClass}>No mandatory lab tests apply to this job/protocol.</p>
+      ) : (
+        <div className="space-y-3">
+          {tests.map((test, i) => (
+            <LabTestRow
+              key={`${i}-${test.name}`}
+              test={test}
+              index={i}
+              row={results[i] ?? EMPTY_LAB_ROW}
+              onChange={(patch) => onChange(i, patch)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

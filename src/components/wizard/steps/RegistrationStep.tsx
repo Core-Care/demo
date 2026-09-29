@@ -1,43 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { JOBS } from "@/data/jobs";
-import type { ExamProtocol, RiskClass } from "@/data/types";
+import type { RiskClass } from "@/data/types";
+import { protocolFromEmploymentStatus, type BeneficiaryDraft } from "@/data/assessment";
 import {
   adminCaptionTextClass,
-  adminDialogCancelButtonClass,
   adminFieldLabelClass,
-  adminPrimaryButtonClass,
   adminSectionTitleClass,
   adminTextInputClass,
   riskBadgeClass,
 } from "@/styles/admin-ui";
-
-export interface BeneficiaryDraft {
-  fullName: string;
-  gender: "male" | "female" | "";
-  jobCode: string;
-  examProtocol: ExamProtocol | "";
-  employmentStatus: "new_hire" | "rehire";
-  email: string;
-  mobile: string;
-  dob: string;
-  nationality: string;
-  notes: string;
-}
-
-const EMPTY_DRAFT: BeneficiaryDraft = {
-  fullName: "",
-  gender: "",
-  jobCode: "",
-  examProtocol: "",
-  employmentStatus: "new_hire",
-  email: "",
-  mobile: "",
-  dob: "",
-  nationality: "",
-  notes: "",
-};
 
 const RISK_LABEL: Record<RiskClass, string> = {
   basic: "Basic",
@@ -45,28 +17,23 @@ const RISK_LABEL: Record<RiskClass, string> = {
   special: "Special",
 };
 
-export function CreateBeneficiaryForm({
-  onCreate,
+export function RegistrationStep({
+  value,
+  onChange,
 }: {
-  onCreate: (draft: BeneficiaryDraft) => void;
+  value: BeneficiaryDraft;
+  onChange: (next: BeneficiaryDraft) => void;
 }) {
-  const [draft, setDraft] = useState<BeneficiaryDraft>(EMPTY_DRAFT);
-  const selectedJob = JOBS.find((j) => j.code === draft.jobCode);
-  const canSubmit = draft.fullName.trim() && draft.jobCode && draft.examProtocol;
+  const selectedJob = JOBS.find((j) => j.code === value.jobCode);
+  const protocol = protocolFromEmploymentStatus(value.employmentStatus);
 
-  function set<K extends keyof BeneficiaryDraft>(key: K, value: BeneficiaryDraft[K]) {
-    setDraft((d) => ({ ...d, [key]: value }));
+  function set<K extends keyof BeneficiaryDraft>(key: K, val: BeneficiaryDraft[K]) {
+    onChange({ ...value, [key]: val });
   }
 
   return (
-    <form
-      className="space-y-6"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (canSubmit) onCreate(draft);
-      }}
-    >
-      <h2 className={adminSectionTitleClass}>Create Beneficiary</h2>
+    <div className="space-y-6">
+      <h2 className={adminSectionTitleClass}>Registration</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -87,7 +54,7 @@ export function CreateBeneficiaryForm({
             Occupation <span className="text-[color:var(--color-orange)]">*</span>
           </label>
           <select
-            value={draft.jobCode}
+            value={value.jobCode}
             onChange={(e) => set("jobCode", e.target.value)}
             className={`${adminTextInputClass} mt-1`}
             required
@@ -106,37 +73,13 @@ export function CreateBeneficiaryForm({
           ) : null}
         </div>
 
-        <div>
-          <label className={adminFieldLabelClass}>
-            Exam protocol <span className="text-[color:var(--color-orange)]">*</span>
-          </label>
-          <select
-            value={draft.examProtocol}
-            onChange={(e) => set("examProtocol", e.target.value as ExamProtocol)}
-            className={`${adminTextInputClass} mt-1`}
-            required
-          >
-            <option value="">Select protocol timing</option>
-            <option value="pre_placement">Pre-Employment (pre-placement)</option>
-            <option value="periodic">Periodic</option>
-          </select>
-          {selectedJob && draft.examProtocol === "periodic" ? (
-            <p className={`${adminCaptionTextClass} mt-1`}>Frequency: {selectedJob.periodicFrequency}</p>
-          ) : null}
-        </div>
-
-        <div>
-          <label className={adminFieldLabelClass}>Employee External ID</label>
-          <input type="text" className={`${adminTextInputClass} mt-1`} />
-        </div>
-
         <div className="sm:col-span-2">
           <label className={adminFieldLabelClass}>
             Full Name <span className="text-[color:var(--color-orange)]">*</span>
           </label>
           <input
             type="text"
-            value={draft.fullName}
+            value={value.fullName}
             onChange={(e) => set("fullName", e.target.value)}
             className={`${adminTextInputClass} mt-1`}
             required
@@ -146,7 +89,7 @@ export function CreateBeneficiaryForm({
         <div>
           <label className={adminFieldLabelClass}>Gender</label>
           <select
-            value={draft.gender}
+            value={value.gender}
             onChange={(e) => set("gender", e.target.value as BeneficiaryDraft["gender"])}
             className={`${adminTextInputClass} mt-1`}
           >
@@ -157,22 +100,32 @@ export function CreateBeneficiaryForm({
         </div>
 
         <div>
-          <label className={adminFieldLabelClass}>Employment Status</label>
+          <label className={adminFieldLabelClass}>
+            Employment Status <span className="text-[color:var(--color-orange)]">*</span>
+          </label>
           <select
-            value={draft.employmentStatus}
+            value={value.employmentStatus}
             onChange={(e) => set("employmentStatus", e.target.value as BeneficiaryDraft["employmentStatus"])}
             className={`${adminTextInputClass} mt-1`}
+            required
           >
-            <option value="new_hire">New Employee</option>
-            <option value="rehire">Rehire</option>
+            <option value="">Select status</option>
+            <option value="new_employee">New Employee</option>
+            <option value="employee">Employee</option>
           </select>
+          {protocol && selectedJob ? (
+            <p className={`${adminCaptionTextClass} mt-1`}>
+              {protocol === "pre_placement" ? "Pre-Employment exam" : "Periodic exam"}
+              {protocol === "periodic" ? ` — ${selectedJob.periodicFrequency}` : ""}
+            </p>
+          ) : null}
         </div>
 
         <div>
           <label className={adminFieldLabelClass}>Email</label>
           <input
             type="email"
-            value={draft.email}
+            value={value.email}
             onChange={(e) => set("email", e.target.value)}
             className={`${adminTextInputClass} mt-1`}
           />
@@ -182,7 +135,7 @@ export function CreateBeneficiaryForm({
           <label className={adminFieldLabelClass}>Mobile</label>
           <input
             type="tel"
-            value={draft.mobile}
+            value={value.mobile}
             onChange={(e) => set("mobile", e.target.value)}
             className={`${adminTextInputClass} mt-1`}
           />
@@ -192,7 +145,7 @@ export function CreateBeneficiaryForm({
           <label className={adminFieldLabelClass}>Date of Birth</label>
           <input
             type="date"
-            value={draft.dob}
+            value={value.dob}
             onChange={(e) => set("dob", e.target.value)}
             className={`${adminTextInputClass} mt-1`}
           />
@@ -202,7 +155,7 @@ export function CreateBeneficiaryForm({
           <label className={adminFieldLabelClass}>Nationality</label>
           <input
             type="text"
-            value={draft.nationality}
+            value={value.nationality}
             onChange={(e) => set("nationality", e.target.value)}
             className={`${adminTextInputClass} mt-1`}
           />
@@ -212,21 +165,12 @@ export function CreateBeneficiaryForm({
           <label className={adminFieldLabelClass}>Notes</label>
           <textarea
             rows={2}
-            value={draft.notes}
+            value={value.notes}
             onChange={(e) => set("notes", e.target.value)}
             className={`${adminTextInputClass} mt-1`}
           />
         </div>
       </div>
-
-      <div className="flex justify-end gap-2 border-t border-[color:var(--color-border)] pt-4">
-        <button type="button" className={adminDialogCancelButtonClass}>
-          Cancel
-        </button>
-        <button type="submit" disabled={!canSubmit} className={adminPrimaryButtonClass}>
-          Create
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
